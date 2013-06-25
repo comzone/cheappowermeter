@@ -1,4 +1,7 @@
 <?
+$currency = "kr.";
+$kwhprice = "2.1";
+$location = "Home";
 
 $link = mysql_connect('localhost', 'measurepower', 'yourpasswordhere');
 if (!$link) {die('Could not connect: ' . mysql_error());}
@@ -31,7 +34,7 @@ if (!$result) {
 }
     while ($row=mysql_fetch_array($result)){
         //echo "".$row['date']." ".$row['watt']."<br>";
-$watt[] = (($row['watt']*$intervalmultiply)/1000);
+$watt[] = (($row['watt']/1000));
 $dates[] = $row['date']."";
 
         }
@@ -39,7 +42,7 @@ $dates[] = $row['date']."";
 
 
 echo "<a href='?interval=m'>Minutes</a> <a href='?interval=h'>Hours</a> <a href='?interval=d'>Days</a> <a href='?interval=mo'>Months</a> <br><br>";
-echo "Usage right now: <b>".round($watt[0],2)." kWh ".round((($watt[0])*2.1),2)." Kr/h.</b><br>";
+echo "Usage right now: <b>".round(($watt[0]*$intervalmultiply),2)." kWh / ".round(((($watt[0]*$intervalmultiply))*$kwhprice),2)." $currency p/hr.</b><br>";
 
 
 // Standard inclusions
@@ -74,13 +77,13 @@ $Test->drawPlotGraph($DataSet->GetData(),$DataSet->GetDataDescription(),3,2,255,
 $Test->setFontProperties("Fonts/tahoma.ttf",8);
 $Test->drawLegend(45,35,$DataSet->GetDataDescription(),255,255,255);
 $Test->setFontProperties("Fonts/tahoma.ttf",10);
-$Test->drawTitle(80,22,"kWh usage at home",50,50,50,585);
+$Test->drawTitle(80,22,"kWh usage at $location",50,50,50,585);
 $Test->Render("chart.png");
 
 echo "<img src=chart.png><br><br>";
 
 foreach ($watt as $key => $value){
-echo $dates[$key]." - <b>".round($value,2)."</b> kWh <b>".round(((($value)*2.1)/$intervalmultiply),2)."</b> kr.<br>";
+echo $dates[$key]." - <b> ".round($value,2)."</b> kWh  <b>".round(((($value)*$kwhprice)),2)."</b> $currency<br>";
 }
 
 mysql_close($link);
