@@ -4,3 +4,5 @@ This Super cheap web-enabled power measurement solution built with a Raspberry P
 
 Checkout my blog for more info:
 http://hyggeit.blogspot.dk/
+
+
