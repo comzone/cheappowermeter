@@ -1,5 +1,9 @@
 <?php
 require ('sqlite.database.php');
+// Standard inclusions
+include("pChart/pData.class.php");
+include("pChart/pDraw.class.php");
+include("pChart/pImage.class.php");
 
 $currency = "kr.";
 $kwhprice = "2.1";
@@ -12,61 +16,71 @@ $db = null;
 
 $intervalmultiply = 1;
 
-echo "<a href='?interval=minute'>Minutes</a> <a href='?interval=hour'>Hours</a> <a href='?interval=day'>Days</a> <a href='?interval=month'>Months</a> <br><br>";
-echo "Usage right now: <b>".round(($result['watt'][0]*$intervalmultiply),2)." kWh / ".round(((($result['watt'][0]*$intervalmultiply))*$kwhprice),2)." $currency p/hr.</b><br>";
-
-// Standard inclusions
-include("pChart/pData.class");
-include("pChart/pChart.class");
 
 // Dataset definition
-$DataSet = new pData;
+$dataset = new pData();
 
+$dataset->addPoints(array_reverse($result['watt']),"Usage");
+$dataset->setSerieDescription("Usage","Usage");
 
-$DataSet->AddPoint($result['watt']);
-$DataSet->AddSerie();
-$DataSet->SetSerieName("kWh","Serie1");
-
-//$DataSet->addPoint($dates,"Labels");
-//$DataSet->setSerieDescription("Labels",$dates);
-//$DataSet->setAbscissa("Labels");
+$dataset->setAxisName(0,"Usage");
+$dataset->setAxisUnit(0,"kWh");
 
 // Initialise the graph
-$Test = new pChart(800,400);
-$Test->setFontProperties("Fonts/tahoma.ttf",10);
-$Test->setGraphArea(60,30,680,200);
-$Test->drawGraphArea(252,252,252);
-$Test->drawScale($DataSet->GetData(),$DataSet->GetDataDescription(),SCALE_NORMAL,150,150,150,TRUE,0,2);
-$Test->drawGrid(4,TRUE,230,230,230,255);
+$graph = new pImage(800,350, $dataset);
+$graph->setFontProperties("Fonts/tahoma.ttf",10);
+$graph->setGraphArea(60,30,680,290);
 
-// Draw the line graph
-$Test->drawLineGraph($DataSet->GetData(),$DataSet->GetDataDescription());
-$Test->drawPlotGraph($DataSet->GetData(),$DataSet->GetDataDescription(),3,2,255,255,255);
+// Finish the graph]
+$graph->setFontProperties(array("FontName"=>"Fonts/tahoma.ttf","FontSize"=>9));
+$scaleSettings = array("XMargin"=>10,"YMargin"=>10,"Floating"=>False,"GridR"=>200,"GridG"=>200,"GridB"=>200,"DrawSubTicks"=>TRUE,"CycleBackground"=>TRUE,"LabelSkip"=>3);
+$graph->drawScale($scaleSettings);
+$graph->setFontProperties(array("FontName"=>"Fonts/tahoma.ttf","FontSize"=>9));
 
-// Finish the graph
-$Test->setFontProperties("Fonts/tahoma.ttf",8);
-$Test->drawLegend(45,35,$DataSet->GetDataDescription(),255,255,255);
-$Test->setFontProperties("Fonts/tahoma.ttf",10);
-$Test->drawTitle(80,22,"kWh usage at $location",50,50,50,585);
-$Test->Render("tmp/chart.png");
+$graph->drawSplineChart(array("DisplayValues"=>FALSE,"DisplayColor"=>DISPLAY_AUTO));
+$graph->Render("tmp/chart.png");
 
-echo "<img src=tmp/chart.png><br><br>";
 ?>
-<table>
-   <thead>
-      <tr>
-         <th align="left">Date</th>
-         <th align="left">kWh</th>
-         <th align="left">Price</th>
-      </tr>
-   </thead>
-   <tbody>
-      <?php foreach ($result['watt'] as $key => $value) { ?>
-      <tr>
-         <td style="width:150px;"><?php echo $result['date'][$key] ?></td>
-         <td style="width:100px;"><?php echo round($value,2) ?> kWh</td>
-         <td style="width:100px;"><?php echo round(((($value)*$kwhprice)),2) . " $currency" ?> </td>
-      </tr>
-      <?php } ?>
-   </tbody>
-</table>
+<!DOCTYPE html>
+<html>
+<head>
+	<title>CheapPowerMeter</title>
+   <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+   <header>
+	   <h1>CheapPowerMeter</h1>
+   </header>
+   <div id="application">
+   	<nav>
+   		<ul>
+   			<li><a href='?interval=minute'>Minutes</a></li>
+   			<li><a href='?interval=hour'>Hours</a></li>
+   			<li><a href='?interval=day'>Days</a></li>
+   			<li><a href='?interval=month'>Months</a></li>
+   		</ul>
+   	</nav>
+   	Usage right now: <strong><?php echo round(($result['watt'][0]*$intervalmultiply),2) ?> kWh / <?php echo round(((($result['watt'][0]*$intervalmultiply))*$kwhprice),2) . " $currency p/hr." ?></strong>
+	
+   	<img src="tmp/chart.png" alt="" class="chart"/>
+   	<table>
+   	   <thead>
+   	      <tr>
+   	         <th align="left">Date</th>
+   	         <th align="left">kWh</th>
+   	         <th align="left">Price</th>
+   	      </tr>
+   	   </thead>
+   	   <tbody>
+   	      <?php foreach ($result['watt'] as $key => $value) { ?>
+   	      <tr>
+   	         <td style="width:150px;"><?php echo $result['date'][$key] ?></td>
+   	         <td style="width:100px;"><?php echo round($value,3) ?> kWh</td>
+   	         <td style="width:100px;"><?php echo round(((($value)*$kwhprice)),4) . " $currency" ?> </td>
+   	      </tr>
+   	      <?php } ?>
+   	   </tbody>
+   	</table>
+   </div>
+</body>
+</html>
