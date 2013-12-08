@@ -48,11 +48,11 @@ class CpmSQLiteDatabase implements CpmDatabase {
       $tmpResult = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
       for ($i = 0; $i < count($tmpResult); $i++) {
-         $result['watt'][$i] = $tmpResult[$i]['watt'] / 1000;
-         $result['date'][$i] = $tmpResult[$i]['date'];
+         $results['watt'][$i] = floatval($tmpResult[$i]['watt'] / 1000);
+         $results['date'][$i] = $tmpResult[$i]['date'];
       }
 
-      return $result;
+      return $results;
    }
 
 }
