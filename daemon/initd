@@ -1,0 +1,62 @@
+#!/bin/sh
+#/etc/init.d/cpm
+#
+
+### BEGIN INIT INFO
+# Provides: cpm
+# Required-Start: 
+# Required-Stop: 
+# Should-Start: 
+# Should-Stop: 
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: Start and stop cpm
+# Description: cpm
+### END INIT INFO
+
+DATABASE="/var/spool/cpm/power.sqlite3"
+APP_USER=root
+APP="/usr/local/bin/cpm"
+
+case "$1" in
+  start)
+
+
+        echo "Starting cpm..."
+
+        start-stop-daemon --start \
+                          --background \
+                          --make-pidfile \
+                          --pidfile /var/run/cpm.pid \
+                          --chuid $APP_USER \
+                          --exec $APP \
+                          -- "-d$DATABASE"
+    ;;
+  stop)
+
+        echo "Stopping cpm..."
+                start-stop-daemon -o  --stop \
+                --pidfile /var/run/cpm.pid
+
+    ;;
+  restart)
+
+        echo "Stopping cpm..."
+        start-stop-daemon -o --retry 5 --stop --pidfile /var/run/$APP_NAME.pid
+
+        echo "Starting cpm..."
+        start-stop-daemon --start \
+                          --background \
+                          --make-pidfile \
+                          --pidfile /var/run/cpm.pid \
+                          --chuid $APP_USER \
+                          --exec $APP \
+                          -- "-d$DATABASE"
+
+    ;;
+  *)
+    echo "Usage: /etc/init.d/cpm {start|stop|restart}"
+    exit 1
+    ;;
+esac
+exit 0
