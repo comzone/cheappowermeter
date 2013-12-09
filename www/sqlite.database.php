@@ -38,7 +38,7 @@ class CpmSQLiteDatabase implements CpmDatabase {
          throw new \Exception("Bad interval");
       }
 
-      $query = "SELECT STRFTIME(:format, datetime) as date, count(id) as watt FROM watthours group by date order by date desc limit :limit";
+      $query = "SELECT STRFTIME(:format, datetime, 'localtime') as date, count(id) as watt FROM watthours group by date order by date desc limit :limit";
       $stmt = $this->db->prepare($query);
 
       $stmt->bindParam(':format', $this->interval[$interval]['format'], \PDO::PARAM_STR);
