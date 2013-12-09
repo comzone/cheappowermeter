@@ -29,7 +29,9 @@
 #include <getopt.h>
 #include <signal.h>
 #include <sys/time.h>
+#ifndef WITHOUT_WIRINGPI
 #include <wiringPi.h>
+#endif
 #include <time.h>
 #include <pthread.h>
 
@@ -144,7 +146,8 @@ int main(int argc, char **argv) {
          exit(1);
       }
    }
-
+   
+#ifndef WITHOUT_WIRINGPI
    /* set priority to maximum and die if fail */
    if (piHiPri(99) != 0) {
       fprintf(stderr, "Setting priorty of process failed\n");
@@ -162,7 +165,8 @@ int main(int argc, char **argv) {
       fprintf(stderr, "Interrupt failed.\n");
       exit(1);
    }
-
+#endif
+   
    if (verbose_flag) {
       fprintf(stderr, "Starting main loop...\n");
    }
