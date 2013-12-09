@@ -26,72 +26,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <getopt.h>
 #include <signal.h>
-#include <unistd.h>
 #include <sys/time.h>
-#include <sqlite3.h>
 #include <wiringPi.h>
 #include <time.h>
+#include <pthread.h>
+
+int verbose_flag;
+#include "cpm.h"
 
 static short int pin = 1;
 static short int sensitivity = 20;
 static short int keepRunning = 1;
-static short int verbose_flag;
 static volatile int lightcounter = 0;
-
-sqlite3 *initialize_db(char *dbfile) {
-   sqlite3 *pDb;
-   int rc;
-   char *zErrMsg = 0;
-   char *sql;
-
-   rc = sqlite3_open_v2(dbfile, &pDb, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
-
-   if (rc) {
-      fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(pDb));
-      sqlite3_close(pDb);
-      exit(1);
-   }
-
-   sql = "CREATE TABLE IF NOT EXISTS watthours ( \
-			id INTEGER PRIMARY KEY AUTOINCREMENT, \
-			datetime DATETIME DEFAULT CURRENT_TIMESTAMP, \
-			lightvalue INTEGER NOT NULL)";
-
-   rc = sqlite3_exec(pDb, sql, NULL, 0, &zErrMsg);
-
-   if (rc != SQLITE_OK) {
-      fprintf(stderr, "SQL error: %s\n", zErrMsg);
-      sqlite3_free(zErrMsg);
-      sqlite3_close(pDb);
-      exit(1);
-   }
-
-   return pDb;
-}
-
-sqlite3_stmt *prepare_statement(sqlite3 *pDb) {
-   sqlite3_stmt *pStmt;
-   const char *sql = "INSERT INTO watthours (lightvalue) VALUES (:usage)";
-
-   sqlite3_prepare_v2(pDb, sql, strlen(sql), &pStmt, NULL);
-
-   return pStmt;
-}
-
-void insert_data(int reading, sqlite3_stmt *pStmt) {
-   const int index = sqlite3_bind_parameter_index(pStmt, ":usage");
-   sqlite3_bind_int(pStmt, index, reading);
-
-   if (sqlite3_step(pStmt) != SQLITE_DONE) {
-      fprintf(stderr, "SQL error!\n");
-   }
-   sqlite3_reset(pStmt);
-}
 
 void intHandler() {
    keepRunning = 0;
@@ -105,13 +53,16 @@ void interrupt_handler(void) {
 
 int main(int argc, char **argv) {
    int c;
-   sqlite3 *pDb;
-   sqlite3_stmt *pStmt;
    time_t timer;
    char buffer[25];
-   char *database;
+   char *database = NULL;
    struct tm* tm_info;
+   pthread_t webapi;
+   api_thread auth;
 
+   auth.apikey = NULL;
+   auth.systemid = NULL;
+   
    while (1) {
       static struct option long_options[] ={
          {"verbose", no_argument, &verbose_flag, 1},
@@ -119,12 +70,14 @@ int main(int argc, char **argv) {
          {"database", required_argument, 0, 'd'},
          {"pin", required_argument, 0, 'p'},
          {"sensitivity", required_argument, 0, 's'},
+	 {"apikey", required_argument, 0, 'k'},
+	 {"systemid", required_argument, 0, 'i'},
          {0, 0, 0, 0}
       };
 
       int option_index = 0;
 
-      c = getopt_long(argc, argv, "vhd:p:s:",
+      c = getopt_long(argc, argv, "vhd:p:s:k:i:",
               long_options, &option_index);
 
       if (c == -1)
@@ -143,23 +96,25 @@ int main(int argc, char **argv) {
             printf("option -h with value ");
             break;
          case 'd':
-            if ((database = malloc(strlen(optarg)+1)) == NULL) {
-               fprintf(stderr, "Invalid value for argument for --database / -d \n");
-               exit(1);
-            }
-            strcpy(database, optarg);
+            database = allocate_str(optarg);
             break;
          case 'p':
-            if (sscanf (optarg, "%i", &pin) != 1) {
+            if (sscanf (optarg, "%hd", &pin) != 1) {
                fprintf(stderr, "Invalid value for argument for --pin / -p \n");
                exit(1);
             }
             break;
          case 's':
-            if (sscanf (optarg, "%i", &sensitivity) != 1) {
+            if (sscanf(optarg, "%hd", &sensitivity) != 1) {
                fprintf(stderr, "Invalid value for argument for --sensitivity / -s \n");
                exit(1);
             }
+            break;
+         case 'k':
+            auth.apikey = allocate_str(optarg);
+            break;
+         case 'i':
+            auth.systemid = allocate_str(optarg);
             break;
 
          default:
@@ -171,10 +126,24 @@ int main(int argc, char **argv) {
       fprintf(stderr, "cpm: --database/-d is required\n");
       exit(1);
    }
+   
+   if ((auth.apikey != NULL  && auth.systemid == NULL) ||
+       (auth.apikey == NULL  && auth.systemid != NULL)) {
+      fprintf(stderr, "cpm: both --apikey / -a and --systemid / -i is required when either is specified \n");
+      exit(1);
+   }
 
    signal(SIGINT, intHandler);
 
-   pDb = initialize_db(database);
+   initialize_db(database);
+
+   if (auth.apikey != NULL && auth.systemid != NULL) {
+      auth.database_file = database;
+      if (pthread_create(&webapi, NULL, &thread_webapi, &auth)) {
+         fprintf(stderr, "cpm: webapi thread could not be created (exit)\n");
+         exit(1);
+      }
+   }
 
    /* set priority to maximum and die if fail */
    if (piHiPri(99) != 0) {
@@ -194,10 +163,8 @@ int main(int argc, char **argv) {
       exit(1);
    }
 
-   pStmt = prepare_statement(pDb);
-
    if (verbose_flag) {
-        fprintf(stderr, "Starting main loop...\n");
+      fprintf(stderr, "Starting main loop...\n");
    }
 
    while (keepRunning) {
@@ -212,19 +179,18 @@ int main(int argc, char **argv) {
             strftime(buffer, 25, "%Y-%m-%d %H:%M:%S", tm_info);
             fprintf(stderr, "\n%s Detected light level %d\n", buffer, lightcounter);
          }
-         insert_data(lightcounter, pStmt);
+         insert_data(lightcounter);
 
          /* Wait before resetting counter so all remaining "single blink" 
             interrupt are cleared */
-         delay(500);
+         usleep(500000);
          lightcounter = 0;
          
       } else {
-         delay(500);
+         usleep(500000);
       }
    }
 
-   sqlite3_finalize(pStmt);
-   sqlite3_close(pDb);
+   close_db();
    return 0;
 }
