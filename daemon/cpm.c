@@ -95,7 +95,22 @@ int main(int argc, char **argv) {
             printf("\n");
             break;
          case 'h':
-            printf("option -h with value ");
+            printf("cpm - CheapPowerMeter (2013 Dec 11)\n\n");
+            printf("Arguments:\n");
+            printf("   -d <file>\t\t\tSqlite3 database file *required\n");
+            printf("   --database\n");
+            printf("   -p <number>\t\t\tOverride default pin (18) on Raspberry Pi's GPIO\n");
+            printf("   --pin\n");
+            printf("   -s <number>\t\t\tHow many interrupts for one valid reading or Wh (default: 20)\n");
+            printf("   --sensitivity\n");
+            printf("   -k <apikey>\t\t\tpvoutput.org APIKey\n");
+            printf("   --apikey\n");
+            printf("   -i <systemid>\t\t\tpvoutput.org SystemId\n");
+            printf("   --systemid\n");
+            printf("   --verbose\t\t\t Increase verbosity\n");
+            printf("   -h  --help\t\t\tPrint Help (this message) and exit\n\n");
+
+            exit(0);
             break;
          case 'd':
             database = allocate_str(optarg);
@@ -150,38 +165,35 @@ int main(int argc, char **argv) {
 #ifndef WITHOUT_WIRINGPI
    /* set priority to maximum and die if fail */
    if (piHiPri(99) != 0) {
-      fprintf(stderr, "Setting priorty of process failed\n");
+      fprintf(stderr, "cpm: Setting priorty of process failed\n");
       exit(1);
    }
 
    if (wiringPiSetup() == -1) {
-      fprintf(stderr, "WiringPI setup failed. You use sudo to run this program\n");
+      fprintf(stderr, "cpm: WiringPI setup failed. You use sudo to run this program\n");
       exit(1);
    }
    pinMode(pin, INPUT);
    pullUpDnControl(pin, PUD_DOWN);
 
    if (wiringPiISR(pin, INT_EDGE_RISING, &interrupt_handler) < 0) {
-      fprintf(stderr, "Interrupt failed.\n");
+      fprintf(stderr, "cpm: Interrupt failed.\n");
       exit(1);
    }
 #endif
    
    if (verbose_flag) {
-      fprintf(stderr, "Starting main loop...\n");
+      fprintf(stderr, "cpm: Starting main loop...\n");
    }
 
    while (keepRunning) {
-      if (verbose_flag) {
-         fprintf(stderr, ".");
-      }
       if (lightcounter / sensitivity) {
          if (verbose_flag) {
             time(&timer);
             tm_info = localtime(&timer);
 
             strftime(buffer, 25, "%Y-%m-%d %H:%M:%S", tm_info);
-            fprintf(stderr, "\n%s Detected light level %d\n", buffer, lightcounter);
+            fprintf(stderr, "%s Detected light level %d\n", buffer, lightcounter);
          }
          insert_data(lightcounter);
 

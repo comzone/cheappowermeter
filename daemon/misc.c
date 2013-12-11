@@ -32,7 +32,7 @@ char *allocate_str(char *input) {
    char *output;
    
    if ((output = malloc(strlen(input) + 1)) == NULL) {
-      fprintf(stderr, "Invalid value for argument for --database / -d \n");
+      fprintf(stderr, "misc: Invalid value for argument for --database / -d \n");
       exit(1);
    }
    strcpy(output, input);
@@ -44,7 +44,7 @@ char *allocate_concat_str(char *str1, char *str2) {
    char *output;
 
    if ((output = malloc(strlen(str1) + strlen(str2) + 1)) == NULL) {
-      fprintf(stderr, "Malloc error, will exit \n");
+      fprintf(stderr, "misc: Malloc error, will exit \n");
       exit(1);
    }
 

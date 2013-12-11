@@ -60,7 +60,7 @@ void initialize_db(char *dbfile) {
       sqlite3_close(pDb);
       exit(1);
    }
-   
+
    //prepare_statement();
 }
 
@@ -80,7 +80,7 @@ void insert_data(int reading) {
    sqlite3_bind_int(pStmt, index, reading);
 
    if (sqlite3_step(pStmt) != SQLITE_DONE) {
-      fprintf(stderr, "SQL error!\n");
+      fprintf(stderr, "sqlite: SQL error!\n");
    }
    sqlite3_reset(pStmt);
 }
@@ -91,55 +91,58 @@ int get_last_data(int minutes, char *dbfile, sql_data *data) {
    int index;
    sqlite3 *lDb;
    sqlite3_stmt *lStmt;
-   
+
    rc = sqlite3_open_v2(dbfile, &lDb, SQLITE_OPEN_READONLY, NULL);
 
    if (rc) {
-      fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(lDb));
+      fprintf(stderr, "sqlite: Can't open database: %s\n", sqlite3_errmsg(lDb));
       sqlite3_close(pDb);
       exit(1);
    }
-   
+
    sql = "select strftime('%Y-%m-%d', datetime('now', 'utc')) as date, \
           strftime('%H:%M', datetime('now', 'utc')) as time, count(*) as watt from watthours \
           where datetime > datetime('now', 'utc', '-5 minutes');";
-   
+
    rc = sqlite3_prepare_v2(lDb, sql, strlen(sql), &lStmt, NULL);
-   
+
    //index = sqlite3_bind_parameter_index(lStmt, ":minutes");
    //rc = sqlite3_bind_int(lStmt, index, minutes); // Using parameters ("?") is not
-   
-   if (rc != SQLITE_OK) { // really necessary, but recommended
-      fprintf(stderr, "BADNESS");
-      fprintf(stderr, "%s\n", sqlite3_errmsg(lDb));
-      sqlite3_finalize(lStmt); // formatting problems and SQL
+
+   if (rc != SQLITE_OK) {
+      fprintf(stderr, "sqlite: %s\n", sqlite3_errmsg(lDb));
+      sqlite3_finalize(lStmt);
       sqlite3_close(lDb);
       return 0;
    }
 
    rc = sqlite3_step(lStmt);
    if (rc != SQLITE_ROW && rc != SQLITE_DONE) {
-      fprintf(stderr, "%s\n", sqlite3_errmsg(lDb));
+      fprintf(stderr, "sqlite: %s\n", sqlite3_errmsg(lDb));
       sqlite3_finalize(lStmt);
       sqlite3_close(lDb);
       return 0;
    }
    if (rc == SQLITE_DONE) {
       sqlite3_finalize(lStmt);
-      fprintf(stderr, "Stale data (err: 0)!\n");
+      if (verbose_flag) {
+         fprintf(stderr, "sqlite: No data in query\n");
+      }
       sqlite3_close(lDb);
       return 0;
    }
 
    if (sqlite3_column_int(lStmt, 2) == 0) {
       sqlite3_finalize(lStmt);
-      fprintf(stderr, "Stale data (err: 1)\n");
+      if (verbose_flag) {
+         fprintf(stderr, "sqlite: Stale data (err: 1)\n");
+      }
       sqlite3_close(lDb);
       return 0;
    }
 
-   data->date = allocate_str((char*)sqlite3_column_text(lStmt, 0));
-   data->time = allocate_str((char*)sqlite3_column_text(lStmt, 1));
+   data->date = allocate_str((char*) sqlite3_column_text(lStmt, 0));
+   data->time = allocate_str((char*) sqlite3_column_text(lStmt, 1));
    data->watt = sqlite3_column_int(lStmt, 2);
 
    sqlite3_finalize(lStmt);
