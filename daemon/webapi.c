@@ -64,10 +64,9 @@ int api_connect(char *apikey, char *systemid, sql_data *data) {
       curl_easy_setopt(curl, CURLOPT_URL, PV_API_URL);
 
       dataStr = prepare_data_str(data);
-
+      curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
       curl_easy_setopt(curl, CURLOPT_POSTFIELDS, dataStr);
-
-      //curl_easy_setopt(curl, CURLOPT_POSTFIELDS, "d=20111201,t=10:00,v1=1000");
+		
       res = curl_easy_perform(curl);
       /* Check for errors */
       if (res != CURLE_OK) {
@@ -88,14 +87,17 @@ void *thread_webapi(void *credentials) {
    }
    for (;;) {
       sql_data data;
-      //sleep(300);
-      sleep(10);
+      sleep(300);
       if (get_last_data(5, auth->database_file, &data) > 0) {
-         //fprintf(stderr, "webapi: good data send to api: %s\n", prepare_data_str(&data));
+         if (verbose_flag) {
+            fprintf(stderr, "webapi: good data send to api: %s\n", prepare_data_str(&data));
+         }
          api_connect(auth->apikey, auth->systemid, &data);
+
       } else {
-         
-         //fprintf(stderr, "webapi: ignore stale or bad data\n");
+         if (verbose_flag) {
+            fprintf(stderr, "webapi: ignore stale or bad data\n");
+         }
       }
    }
 
