@@ -50,7 +50,7 @@ void initialize_db(char *dbfile) {
    sql = "CREATE TABLE IF NOT EXISTS watthours ( \
 			id INTEGER PRIMARY KEY AUTOINCREMENT, \
 			datetime DATETIME DEFAULT CURRENT_TIMESTAMP, \
-			lightvalue INTEGER NOT NULL)";
+			watthour INTEGER NOT NULL)";
 
    rc = sqlite3_exec(pDb, sql, NULL, 0, &zErrMsg);
 
@@ -70,7 +70,7 @@ void close_db() {
 
 void prepare_statement() {
    sqlite3_stmt *pStmt;
-   const char *sql = "INSERT INTO watthours (lightvalue) VALUES (:usage)";
+   const char *sql = "INSERT INTO watthours (watthour) VALUES (:usage)";
 
    sqlite3_prepare_v2(pDb, sql, strlen(sql), &pStmt, NULL);
 }
@@ -101,7 +101,7 @@ int get_last_data(int minutes, char *dbfile, sql_data *data) {
    }
 
    sql = "select strftime('%Y-%m-%d', datetime('now', 'utc')) as date, \
-          strftime('%H:%M', datetime('now', 'utc')) as time, count(*) as watt from watthours \
+          strftime('%H:%M', datetime('now', 'utc')) as time, sum(watthour) as watt from watthours \
           where datetime > datetime('now', 'utc', '-5 minutes');";
 
    rc = sqlite3_prepare_v2(lDb, sql, strlen(sql), &lStmt, NULL);

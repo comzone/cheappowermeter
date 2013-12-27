@@ -41,14 +41,15 @@ int verbose_flag;
 static short int pin = 1;
 static short int sensitivity = 20;
 static short int keepRunning = 1;
-static volatile int lightcounter = 0;
+static volatile int interruptcounter = 0;
+static int wattcounter = 0;
 
 void intHandler() {
    keepRunning = 0;
 }
 
 void interrupt_handler(void) {
-   ++lightcounter;
+   ++interruptcounter;
    /* When diode lights up to 2000 interrupt are fired, try to throttle a little */
    usleep(100);
 }
@@ -187,26 +188,34 @@ int main(int argc, char **argv) {
    }
 
    while (keepRunning) {
-      if (lightcounter / sensitivity) {
+      if (interruptcounter / sensitivity) {
          if (verbose_flag) {
             time(&timer);
             tm_info = localtime(&timer);
 
             strftime(buffer, 25, "%Y-%m-%d %H:%M:%S", tm_info);
-            fprintf(stderr, "%s Detected light level %d\n", buffer, lightcounter);
+            fprintf(stderr, "%s Detected light level %d\n", buffer, interruptcounter);
          }
-         insert_data(lightcounter);
-
+         ++wattcounter;
          /* Wait before resetting counter so all remaining "single blink" 
             interrupt are cleared */
          usleep(500000);
-         lightcounter = 0;
-         
+         interruptcounter = 0;
       } else {
          usleep(500000);
       }
+      
+      /* Only insert every minute to save system resources */
+      if (wattcounter > 0 && (int)time(NULL) % 60 == 0) {
+         insert_data(wattcounter);
+         wattcounter = 0;
+      }
    }
-
+   
+   if (wattcounter > 0) {
+      insert_data(wattcounter);
+   }
+   
    close_db();
    return 0;
 }
