@@ -38,7 +38,8 @@ void initialize_db(char *dbfile) {
    int rc;
    char *zErrMsg = 0;
    char *sql;
-
+   const char *sql2 = "INSERT INTO watthours (watthour) VALUES (:usage)";
+   
    rc = sqlite3_open_v2(dbfile, &pDb, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, NULL);
 
    if (rc) {
@@ -61,18 +62,11 @@ void initialize_db(char *dbfile) {
       exit(1);
    }
 
-   //prepare_statement();
+   sqlite3_prepare_v2(pDb, sql2, strlen(sql), &pStmt, NULL);
 }
 
 void close_db() {
    sqlite3_close(pDb);
-}
-
-void prepare_statement() {
-   sqlite3_stmt *pStmt;
-   const char *sql = "INSERT INTO watthours (watthour) VALUES (:usage)";
-
-   sqlite3_prepare_v2(pDb, sql, strlen(sql), &pStmt, NULL);
 }
 
 void insert_data(int reading) {
