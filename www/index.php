@@ -54,7 +54,6 @@ $graph->Render("tmp/chart.png");
    <div id="application">
    	<nav>
    		<ul>
-   			<li><a href='?interval=minute'>Minutes</a></li>
    			<li><a href='?interval=hour'>Hours</a></li>
    			<li><a href='?interval=day'>Days</a></li>
    			<li><a href='?interval=month'>Months</a></li>

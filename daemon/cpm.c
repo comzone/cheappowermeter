@@ -205,8 +205,8 @@ int main(int argc, char **argv) {
          usleep(500000);
       }
       
-      /* Only insert every minute to save system resources */
-      if (wattcounter > 0 && (int)time(NULL) % 60 == 0) {
+      /* Only insert every 5 minutes to save system resources when getting data */
+      if (wattcounter > 0 && (int)time(NULL) % 300 == 0) {
          insert_data(wattcounter);
          wattcounter = 0;
       }
