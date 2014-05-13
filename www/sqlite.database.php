@@ -4,7 +4,8 @@ require_once('database.php');
 class CpmSQLiteDatabase implements CpmDatabase {
 
    protected $db;
-   private $interval = array('hour'    => array('format' => '%Y-%m-%d %H'     , 'limit' => 24),
+   private $interval = array('minute'  => array('format' => '%Y-%m-%d %H:%M'  , 'limit' => 1),
+                             'hour'    => array('format' => '%Y-%m-%d %H'     , 'limit' => 24),
                              'day'     => array('format' => '%Y-%m-%d'        , 'limit' => 744),
                              'month'   => array('format' => '%Y-%m'           , 'limit' => 8760)
    );
