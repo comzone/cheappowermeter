@@ -4,10 +4,9 @@ require_once('database.php');
 class CpmMySQLDatabase implements CpmDatabase {
 
    protected $db;
-   private $interval = array('minute' => array('format' => '%Y-%m-%d %H:%i', 'limit' => 60),
-                                               'hour' => array('format' => '%Y-%m-%d %H', 'limit' => 24),
-                                               'day' => array('format' => '%Y-%m-%d', 'limit' => 31),
-                                               'month' => array('format' => '%Y-%m', 'limit' => 12)
+   private $interval = array('hour'    => array('format' => '%Y-%m-%d %H'     , 'limit' => 24),
+                             'day'     => array('format' => '%Y-%m-%d'        , 'limit' => 744),
+                             'month'   => array('format' => '%Y-%m'           , 'limit' => 8760)
    );
 
    public function __construct($hostname, $username, $password) {
@@ -38,11 +37,16 @@ class CpmMySQLDatabase implements CpmDatabase {
          throw new \Exception("Bad interval");
       }
 
-      $query = "SELECT DATE_FORMAT(datetime, :format) as date, sum(watthour) as watt FROM watthours group by date order by date desc limit :limit";
+      $query = "SELECT DATE_FORMAT(datetime, :format) AS date, sum(watthour) AS watt 
+                FROM watthours
+                WHERE datetime > DATE_ADD(NOW(), INTERVAL :limit);
+                GROUP BY date 
+                ORDER BY date DESC";
       $stmt = $this->db->prepare($query);
-
+      
+      $limit = '-' . $this->interval[$interval]['limit'] . ' HOUR';
       $stmt->bindParam(':format', $this->interval[$interval]['format'], \PDO::PARAM_STR);
-      $stmt->bindParam(':limit', $this->interval[$interval]['limit'], \PDO::PARAM_INT);
+      $stmt->bindParam(':limit', $limit, \PDO::PARAM_STR);
 
       $stmt->execute();
       $tmpResult = $stmt->fetchAll(\PDO::FETCH_ASSOC);
